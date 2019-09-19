@@ -3,6 +3,10 @@
 #ifndef DISABLE_DPDK
 /* for mtcp related def'ns */
 #include "mtcp.h"
+
+//@shenyifan
+#include "virtual_delay.h"
+
 /* for errno */
 #include <errno.h>
 /* for logging */
@@ -420,13 +424,19 @@ dpdk_pass_pkt(struct mtcp_thread_context *ctxt, int ifidx)
 }
 
 /*----------------------------------------------------------------------------*/
+//#define DELAYED_SEND
+#ifdef DELAYED_SEND
+  #define SEND_DELAY_TIME   0 // delay 100ms
+  #define MAX_SEND_BATCH    1024
+#endif
+
 int dpdk_send_pkts(struct mtcp_thread_context *ctxt, int ifidx)
 {
 	struct dpdk_private_context *dpc;
 #ifdef NETSTAT
 	mtcp_manager_t mtcp;
 #endif
-	int ret, i, portid = CONFIG.eths[ifidx].ifindex;
+	int ret, portid = CONFIG.eths[ifidx].ifindex;
 
 	dpc = (struct dpdk_private_context *)ctxt->io_private_context;
 #ifdef NETSTAT
@@ -445,6 +455,19 @@ int dpdk_send_pkts(struct mtcp_thread_context *ctxt, int ifidx)
 #endif /* !ENABLE_STATS_IOCTL */
 		int cnt = dpc->wmbufs[ifidx].len;
 		pkts = dpc->wmbufs[ifidx].m_table;
+
+#ifdef DELAYED_SEND
+    uint32_t cur_ts = ctxt->mtcp_manager->cur_ts;
+    /* Insert rte_mbufs into delay_send_list*/
+    delay_list_append_batch(&dpc->delay_send_list, pkts, cnt, cur_ts, 
+        pktmbuf_pool[ctxt->cpu]);
+    mbuf_t send_pkts[MAX_SEND_BATCH];
+    pkts = send_pkts;
+    /* Send out packets that have been delayed for 'SEND_DELAY_TIME' */
+    cnt = delay_list_check(&dpc->delay_send_list, pkts, MAX_SEND_BATCH, 
+        cur_ts, SEND_DELAY_TIME);
+#endif
+
 #ifdef NETSTAT
 		mtcp->nstat.tx_packets[ifidx] += cnt;
 #ifdef ENABLE_STATS_IOCTL
@@ -484,7 +507,10 @@ int dpdk_send_pkts(struct mtcp_thread_context *ctxt, int ifidx)
 			/* if not all pkts were sent... then repeat the cycle */
 		} while (cnt > 0);
 
+#ifndef DELAYED_SEND
+    // the mbufs have been allocated in DELAYED_SEND mode
 		/* time to allocate fresh mbufs for the queue */
+		int i;
 		for (i = 0; i < dpc->wmbufs[ifidx].len; i++) {
 			dpc->wmbufs[ifidx].m_table[i] = rte_pktmbuf_alloc(pktmbuf_pool[ctxt->cpu]);
 			/* error checking */
@@ -494,6 +520,7 @@ int dpdk_send_pkts(struct mtcp_thread_context *ctxt, int ifidx)
 				exit(EXIT_FAILURE);
 			}
 		}
+#endif
 		/* reset the len of mbufs var after flushing of packets */
 		dpc->wmbufs[ifidx].len = 0;
 	}
