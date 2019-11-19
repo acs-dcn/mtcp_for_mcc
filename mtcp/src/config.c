@@ -37,6 +37,9 @@ struct mtcp_config CONFIG = {
 	.tcp_timeout	  =			TCP_TIMEOUT,
 	.tcp_timewait	  =			TCP_TIMEWAIT,
 	.num_mem_ch	  =			0,
+#ifdef DYNAMIC_MSS
+    .mss              =     1460,
+#endif
 #ifdef ENABLE_ONVM
 	.onvm_inst	  =			(uint16_t) -1,
 	.onvm_dest	  =			(uint16_t) -1,
@@ -637,6 +640,10 @@ ParseConfiguration(char *line)
 		}
 	} else if (strcmp(p, "num_mem_ch") == 0) {
 		CONFIG.num_mem_ch = mystrtol(q, 10);
+#ifdef DYNAMIC_MSS
+    } else if (strcmp(p, "mss") == 0) {  // @ wuwenqing, for MCC
+        CONFIG.mss = mystrtol(q, 10);
+#endif
 #ifdef ENABLE_ONVM
 	} else if (strcmp(p, "onvm_inst") == 0) {
 		CONFIG.onvm_inst = mystrtol(q, 10);
@@ -749,6 +756,10 @@ PrintConfiguration()
 	}
 	TRACE_CONFIG("TCP timewait seconds: %d\n", 
 			USEC_TO_SEC(CONFIG.tcp_timewait * TIME_TICK));
+#ifdef DYNAMIC_MSS
+    //@wuwenqing, For mcc
+    TRACE_CONFIG("TCP MSS: %d\n", CONFIG.mss);
+#endif
 	TRACE_CONFIG("NICs to print statistics:");
 	for (i = 0; i < CONFIG.eths_num; i++) {
 		if (CONFIG.eths[i].stat_print) {

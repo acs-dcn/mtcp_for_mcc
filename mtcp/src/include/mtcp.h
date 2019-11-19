@@ -169,6 +169,11 @@ struct mtcp_config
 	uint8_t multi_process;
 	uint8_t multi_process_is_master;
 
+#ifdef DYNAMIC_MSS
+    //@wuwenqing For MCC
+    int mss;
+#endif
+
 #ifdef ENABLE_ONVM
 	struct onvm_nf_info *nf_info;
 	/* onvm specific args */

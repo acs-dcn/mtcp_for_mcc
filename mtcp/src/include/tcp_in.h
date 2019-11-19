@@ -33,7 +33,13 @@
 #define TCP_OPT_SACK_LEN		10
 #define TCP_OPT_TIMESTAMP_LEN	10
 
+//@wuwenqing, for MCC
+#ifdef DYNAMIC_MSS
+#define TCP_DEFAULT_MSS         CONFIG.mss
+#else
 #define TCP_DEFAULT_MSS			1460
+#endif
+
 #define TCP_DEFAULT_WSCALE		7
 #define TCP_INITIAL_WINDOW		14600	// initial window size
 
