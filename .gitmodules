@@ -1,6 +1,6 @@
 [submodule "dpdk"]
 	path = dpdk
-	url = http://172.16.32.104/wuwenqing/dpdk.git
-  branch = master
-  commit = 0da7f445df445630c794897347ee360d6fe6348b
+	url = https://github.com/WenqingWu/dpdk_for_mcc.git
+	branch = master
+	commit = e7a38ef05ad9c56cdc7d62b1016b23c512412a53
 
